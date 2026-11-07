@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Cadastros — Apontamento{% endblock %}
+{% block content %}
+<div class="grid-cadastros">
+  <section class="card">
+    <h2>Aparelhos ({{ aparelhos|length }})</h2>
+    <form method="post" action="{{ url_for('repasse.criar_aparelho') }}" class="form form-inline">
+      <label>Código
+        <input name="codigo" required maxlength="6" pattern="[0-9]{3}[A-Za-z]{3}" placeholder="100ABC"
+               title="3 números seguidos de 3 letras" class="maiusculo">
+      </label>
+      <label>Nome
+        <input name="nome" required maxlength="100">
+      </label>
+      <button type="submit">Adicionar</button>
+    </form>
+
+    <div class="tabela-wrap">
+      <table>
+        <thead><tr><th>Código</th><th>Nome</th><th class="col-acao"></th></tr></thead>
+        <tbody>
+          {% for a in aparelhos %}
+          <tr>
+            <td>{{ a.codigo }}</td>
+            <td>{{ a.nome }}</td>
+            <td class="col-acao">
+              {% if a.usos %}
+              <span class="em-uso" title="Possui {{ a.usos }} repasse(s) registrado(s)">em uso</span>
+              {% else %}
+              <form method="post" action="{{ url_for('repasse.excluir_aparelho', codigo=a.codigo) }}"
+                    onsubmit='return confirm({{ ("Excluir o aparelho " ~ a.codigo ~ " — " ~ a.nome ~ "?")|tojson }})'>
+                <button type="submit" class="btn-excluir" title="Excluir">Excluir</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="vazio">Nenhum aparelho cadastrado.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Soldadores ({{ soldadores|length }})</h2>
+    <form method="post" action="{{ url_for('repasse.criar_soldador') }}" class="form form-inline">
+      <label>Letra
+        <input name="letra" required maxlength="2" pattern="[A-Za-z0-9]{1,2}" placeholder="A"
+               title="1 ou 2 caracteres" class="maiusculo">
+      </label>
+      <label>Nome
+        <input name="nome" required maxlength="100">
+      </label>
+      <button type="submit">Adicionar</button>
+    </form>
+
+    <div class="tabela-wrap">
+      <table>
+        <thead><tr><th>Letra</th><th>Nome</th><th class="col-acao"></th></tr></thead>
+        <tbody>
+          {% for s in soldadores %}
+          <tr>
+            <td>{{ s.letra }}</td>
+            <td>{{ s.nome }}</td>
+            <td class="col-acao">
+              {% if s.usos %}
+              <span class="em-uso" title="Possui {{ s.usos }} repasse(s) registrado(s)">em uso</span>
+              {% else %}
+              <form method="post" action="{{ url_for('repasse.excluir_soldador', letra=s.letra) }}"
+                    onsubmit='return confirm({{ ("Excluir o soldador " ~ s.letra ~ " — " ~ s.nome ~ "?")|tojson }})'>
+                <button type="submit" class="btn-excluir" title="Excluir">Excluir</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="vazio">Nenhum soldador cadastrado.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

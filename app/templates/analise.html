@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Análise — Apontamento{% endblock %}
+{% block content %}
+<section class="card">
+  <form method="get" class="form filtros filtros-analise">
+    <label>Início de
+      <input type="date" name="de" value="{{ de }}">
+    </label>
+    <label>até
+      <input type="date" name="ate" value="{{ ate }}">
+    </label>
+    <div class="filtros-acoes">
+      <button type="submit">Aplicar</button>
+      {% if de or ate %}<a href="{{ url_for('repasse.analise') }}" class="link-limpar">Todo o período</a>{% endif %}
+    </div>
+  </form>
+
+  <div class="kpis">
+    <div class="kpi">
+      <span class="kpi-rotulo">Repasses analisados</span>
+      <span class="kpi-valor">{{ geral.n }}</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-rotulo">Tempo médio geral</span>
+      <span class="kpi-valor">{{ geral.media|minutos }}</span>
+    </div>
+    {% if destaques.aparelho_lento %}
+    <div class="kpi">
+      <span class="kpi-rotulo">Aparelho mais demorado</span>
+      <span class="kpi-valor">{{ destaques.aparelho_lento.media|minutos }}</span>
+      <span class="kpi-sub">{{ destaques.aparelho_lento.codigo }} — {{ destaques.aparelho_lento.nome }}</span>
+    </div>
+    {% endif %}
+    {% if destaques.soldador_rapido %}
+    <div class="kpi">
+      <span class="kpi-rotulo">Soldador mais rápido (média)</span>
+      <span class="kpi-valor">{{ destaques.soldador_rapido.media|minutos }}</span>
+      <span class="kpi-sub">{{ destaques.soldador_rapido.letra }} — {{ destaques.soldador_rapido.nome }}</span>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="card">
+  <h2>Tempo médio por aparelho</h2>
+  <p class="nota">Do mais demorado para o mais rápido. Tempo = hora de término − hora de início.</p>
+  <div class="tabela-wrap">
+    <table class="tabela-analise">
+      <thead>
+        <tr><th>Aparelho</th><th class="num">Repasses</th><th class="col-barra">Tempo médio</th><th class="num">Mínimo</th><th class="num">Máximo</th></tr>
+      </thead>
+      <tbody>
+        {% for a in por_aparelho %}
+        <tr title="{{ a.codigo }} — {{ a.nome }}: média {{ a.media|minutos }} em {{ a.n }} repasse(s)">
+          <td><strong>{{ a.codigo }}</strong> <span class="secundario">{{ a.nome }}</span></td>
+          <td class="num">{{ a.n }}</td>
+          <td class="col-barra">
+            {% if a.n %}
+            <div class="barra-linha">
+              <div class="barra-trilho"><div class="barra" style="width: {{ (a.media / maior_media * 100)|round(1) }}%"></div></div>
+              <span class="barra-valor">{{ a.media|minutos }}</span>
+            </div>
+            {% else %}<span class="secundario">sem repasses</span>{% endif %}
+          </td>
+          <td class="num">{{ a.minimo|minutos }}</td>
+          <td class="num">{{ a.maximo|minutos }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Tempo médio por soldador em cada aparelho</h2>
+  <p class="nota">Cada célula mostra a média em minutos daquele soldador naquele aparelho. Quanto mais escuro, mais demorado. Passe o mouse sobre a célula para ver os detalhes.</p>
+
+  <div class="legenda" aria-label="Legenda de cores">
+    <span class="legenda-titulo">Minutos:</span>
+    {% for f in faixas %}
+    <span class="legenda-item"><span class="legenda-cor" style="background: {{ f.cor }}"></span>{{ f.de|round|int }}–{{ f.ate|round|int }}</span>
+    {% endfor %}
+    <span class="legenda-item"><span class="legenda-cor legenda-vazio"></span>sem dados</span>
+  </div>
+
+  <div class="tabela-wrap">
+    <table class="heatmap">
+      <thead>
+        <tr>
+          <th class="heat-rotulo">Aparelho</th>
+          {% for s in soldadores %}<th title="{{ s.nome }}">{{ s.letra }}</th>{% endfor %}
+          <th class="heat-total">Média</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in heat_aparelhos %}
+        <tr>
+          <th class="heat-rotulo" title="{{ a.nome }}">{{ a.codigo }} <span class="secundario">{{ a.nome }}</span></th>
+          {% for s in soldadores %}
+          {% set p = pares.get((a.codigo, s.letra)) %}
+          {% if p %}
+          {% set f = faixa(p.media) %}
+          <td class="heat-cel{{ ' escuro' if f.escuro }}" style="background: {{ f.cor }}"
+              title="{{ s.letra }} — {{ s.nome }} · {{ a.codigo }} {{ a.nome }}&#10;Média: {{ p.media|minutos }} ({{ p.n }} repasse{{ 's' if p.n != 1 }})">{{ p.media|round|int }}</td>
+          {% else %}
+          <td class="heat-cel heat-vazio" title="{{ s.letra }} — {{ s.nome }} · {{ a.codigo }}: sem repasses">—</td>
+          {% endif %}
+          {% endfor %}
+          <td class="heat-total">{{ a.media|round|int if a.n else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th class="heat-rotulo">Média do soldador</th>
+          {% for s in soldadores %}
+          <td class="heat-total" title="{{ s.nome }}: {{ s.media|minutos }} em {{ s.n }} repasse(s)">{{ s.media|round|int if s.n else '—' }}</td>
+          {% endfor %}
+          <td class="heat-total">{{ geral.media|round|int if geral.n else '—' }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <h3 class="sub">Soldadores</h3>
+  <div class="tabela-wrap">
+    <table class="tabela-analise tabela-soldadores">
+      <thead><tr><th>Letra</th><th>Nome</th><th class="num">Repasses</th><th class="num">Tempo médio</th></tr></thead>
+      <tbody>
+        {% for s in soldadores %}
+        <tr><td><strong>{{ s.letra }}</strong></td><td>{{ s.nome }}</td><td class="num">{{ s.n }}</td><td class="num">{{ s.media|minutos }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

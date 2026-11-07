@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Novo repasse</h2>
+  <form method="post" class="form">
+    <label>Aparelho
+      <select name="aparelho" required autofocus>
+        <option value="">Selecione…</option>
+        {% for a in aparelhos %}
+        <option value="{{ a.codigo }}" {{ 'selected' if form.aparelho == a.codigo }}>{{ a.codigo }} — {{ a.nome }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Hora de início
+      <input type="datetime-local" name="hora_inicio" value="{{ form.hora_inicio }}" required>
+    </label>
+    <label>Hora de término
+      <input type="datetime-local" name="hora_termino" value="{{ form.hora_termino }}" required>
+    </label>
+    <label>Letra (soldador)
+      <select name="letra" required>
+        <option value="">Selecione…</option>
+        {% for s in soldadores %}
+        <option value="{{ s.letra }}" {{ 'selected' if form.letra == s.letra }}>{{ s.letra }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="full">Observações <span class="opcional">(opcional)</span>
+      <textarea name="observacoes" rows="2" maxlength="500">{{ form.observacoes }}</textarea>
+    </label>
+    <button type="submit">Registrar</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Repasses ({{ registros|length }}{% if filtrando %} de {{ total }}{% endif %})</h2>
+
+  <form method="get" action="{{ url_for('repasse.index') }}" class="form filtros">
+    <label>Aparelho
+      <select name="f_aparelho">
+        <option value="">Todos</option>
+        {% for a in aparelhos %}
+        <option value="{{ a.codigo }}" {{ 'selected' if filtros.f_aparelho == a.codigo }}>{{ a.codigo }} — {{ a.nome }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Data de início
+      <input type="date" name="f_data_inicio" value="{{ filtros.f_data_inicio }}">
+    </label>
+    <label>Data de término
+      <input type="date" name="f_data_termino" value="{{ filtros.f_data_termino }}">
+    </label>
+    <label>Letra
+      <select name="f_letra">
+        <option value="">Todas</option>
+        {% for s in soldadores %}
+        <option value="{{ s.letra }}" {{ 'selected' if filtros.f_letra == s.letra }}>{{ s.letra }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Nome do soldador
+      <input type="search" name="f_soldador" value="{{ filtros.f_soldador }}" maxlength="100" placeholder="Parte do nome">
+    </label>
+    <div class="filtros-acoes">
+      <button type="submit">Filtrar</button>
+      {% if filtrando %}<a href="{{ url_for('repasse.index') }}" class="link-limpar">Limpar</a>{% endif %}
+    </div>
+  </form>
+
+  {% if registros %}
+  <div class="tabela-wrap">
+    <table>
+      <thead>
+        <tr><th>#</th><th>Aparelho</th><th>Início</th><th>Término</th><th>Letra</th><th>Soldador</th><th class="col-obs">Obs.</th></tr>
+      </thead>
+      <tbody>
+        {% for r in registros %}
+        <tr{% if r.observacoes %} class="tem-obs" tabindex="0" role="button" aria-expanded="false" aria-controls="obs-{{ r.id }}" title="Clique para ver a observação"{% endif %}>
+          <td>{{ r.id }}</td>
+          <td>{{ r.aparelho }}</td>
+          <td>{{ r.hora_inicio|datahora }}</td>
+          <td>{{ r.hora_termino|datahora }}</td>
+          <td>{{ r.letra }}</td>
+          <td>{{ r.soldador or '—' }}</td>
+          <td class="col-obs">{% if r.observacoes %}<span class="icone-alerta" aria-label="Possui observação">!</span>{% endif %}</td>
+        </tr>
+        {% if r.observacoes %}
+        <tr class="linha-obs" id="obs-{{ r.id }}" hidden>
+          <td colspan="7"><strong>Observação:</strong> {{ r.observacoes }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="vazio">{% if filtrando %}Nenhum repasse encontrado com esses filtros.{% else %}Nenhum repasse registrado ainda.{% endif %}</p>
+  {% endif %}
+</section>
+
+<script>
+  function alternarObs(linha) {
+    const detalhe = document.getElementById(linha.getAttribute("aria-controls"));
+    const aberto = linha.getAttribute("aria-expanded") === "true";
+    linha.setAttribute("aria-expanded", String(!aberto));
+    detalhe.hidden = aberto;
+  }
+  document.querySelectorAll("tr.tem-obs").forEach((linha) => {
+    linha.addEventListener("click", () => alternarObs(linha));
+    linha.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternarObs(linha); }
+    });
+  });
+</script>
+{% endblock %}

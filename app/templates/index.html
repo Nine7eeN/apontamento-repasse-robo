@@ -71,7 +71,7 @@
   <div class="tabela-wrap">
     <table>
       <thead>
-        <tr><th>#</th><th>Aparelho</th><th>Início</th><th>Término</th><th>Letra</th><th>Soldador</th><th class="col-obs">Obs.</th></tr>
+        <tr><th>#</th><th>Aparelho</th><th>Início</th><th>Término</th><th>Letra</th><th>Soldador</th><th class="col-obs">Obs.</th><th class="col-acao"></th></tr>
       </thead>
       <tbody>
         {% for r in registros %}
@@ -83,10 +83,16 @@
           <td>{{ r.letra }}</td>
           <td>{{ r.soldador or '—' }}</td>
           <td class="col-obs">{% if r.observacoes %}<span class="icone-alerta" aria-label="Possui observação">!</span>{% endif %}</td>
+          <td class="col-acao">
+            <form method="post" action="{{ url_for('repasse.excluir_repasse', repasse_id=r.id, **filtros_ativos) }}"
+                  onsubmit='return confirm({{ ("Excluir o repasse #" ~ r.id ~ " — " ~ r.aparelho ~ " (" ~ r.hora_inicio|datahora ~ ")?")|tojson }})'>
+              <button type="submit" class="btn-excluir" title="Excluir repasse">Excluir</button>
+            </form>
+          </td>
         </tr>
         {% if r.observacoes %}
         <tr class="linha-obs" id="obs-{{ r.id }}" hidden>
-          <td colspan="7"><strong>Observação:</strong> {{ r.observacoes }}</td>
+          <td colspan="8"><strong>Observação:</strong> {{ r.observacoes }}</td>
         </tr>
         {% endif %}
         {% endfor %}
@@ -106,8 +112,12 @@
     detalhe.hidden = aberto;
   }
   document.querySelectorAll("tr.tem-obs").forEach((linha) => {
-    linha.addEventListener("click", () => alternarObs(linha));
+    linha.addEventListener("click", (e) => {
+      if (e.target.closest(".col-acao")) return; // clique no botão Excluir não expande a linha
+      alternarObs(linha);
+    });
     linha.addEventListener("keydown", (e) => {
+      if (e.target !== linha) return;
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternarObs(linha); }
     });
   });

@@ -96,7 +96,22 @@ def index():
     total = db.execute("SELECT COUNT(*) FROM repasses").fetchone()[0]
     return render_template("index.html", registros=registros, aparelhos=aparelhos,
                            soldadores=soldadores, form=form, filtros=filtros,
+                           filtros_ativos={k: v for k, v in filtros.items() if v},
                            filtrando=bool(condicoes), total=total)
+
+
+@bp.post("/repasses/<int:repasse_id>/excluir")
+def excluir_repasse(repasse_id):
+    db = get_db()
+    cur = db.execute("DELETE FROM repasses WHERE id = ?", (repasse_id,))
+    db.commit()
+    if cur.rowcount:
+        flash(f"Repasse #{repasse_id} excluído.", "ok")
+    else:
+        flash("Repasse não encontrado.", "erro")
+    # Mantém os filtros que estavam ativos na listagem.
+    filtros = {k: v for k in FILTROS if (v := request.args.get(k, "").strip())}
+    return redirect(url_for("repasse.index", **filtros))
 
 
 CODIGO_RE = re.compile(r"^[0-9]{3}[A-Z]{3}$")
